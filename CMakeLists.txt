@@ -23,7 +23,8 @@ endif()
 
 add_library(aaplcad
     src/core/log.cpp
-    src/platform/platform.cpp)
+    src/platform/platform.cpp
+    src/database/document.cpp)
 
 add_library(aaplcad::aaplcad ALIAS aaplcad)
 

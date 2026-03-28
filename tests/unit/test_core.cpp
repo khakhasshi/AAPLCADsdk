@@ -1,6 +1,11 @@
 #include "aaplcad/core/object_id.h"
 #include "aaplcad/core/result.h"
 #include "aaplcad/core/vector2d.h"
+#include "aaplcad/database/document.h"
+#include "aaplcad/database/line_entity.h"
+#include "aaplcad/geometry/circle2d.h"
+#include "aaplcad/geometry/line2d.h"
+#include "aaplcad/geometry/point2d.h"
 #include "aaplcad/platform/platform.h"
 
 #include <cstdlib>
@@ -34,6 +39,36 @@ int main() {
 
     const auto point = aaplcad::core::Vector2d{1.0, 2.0}.translated(3.0, -1.0);
     require(point.x == 4.0 && point.y == 1.0, "vector translation should work");
+
+    const auto movedPoint = aaplcad::geometry::Point2d{2.0, 5.0}.translated(-1.0, 4.0);
+    require(movedPoint.x == 1.0 && movedPoint.y == 9.0, "point translation should work");
+
+    const aaplcad::geometry::Line2d line{{0.0, 1.0}, {4.0, 3.0}};
+    const auto lineExtents = line.extents();
+    require(lineExtents.width() == 4.0, "line extents should compute width");
+    require(lineExtents.height() == 2.0, "line extents should compute height");
+
+    const aaplcad::geometry::Circle2d circle{{3.0, 3.0}, 2.0};
+    const auto circleExtents = circle.extents();
+    require(circleExtents.min.x == 1.0 && circleExtents.max.y == 5.0, "circle extents should reflect radius");
+
+    aaplcad::database::Document document;
+    require(document.layerCount() == 1, "document should create default layer");
+
+    const auto layerResult = document.addLayer("geometry");
+    require(layerResult.ok(), "adding a new layer should succeed");
+    require(document.layerCount() == 2, "layer count should increase after insertion");
+
+    auto entity = std::make_unique<aaplcad::database::LineEntity>(line);
+    entity->setLayerName("geometry");
+
+    const auto entityResult = document.addEntity(std::move(entity));
+    require(entityResult.ok(), "adding an entity should succeed when layer exists");
+    require(document.entityCount() == 1, "entity count should increase after insertion");
+    require(document.findEntity(entityResult.value()) != nullptr, "document should find stored entity by id");
+
+    const auto transaction = document.beginTransaction();
+    require(transaction.isActive(), "new transaction should be active");
 
     const auto platform = aaplcad::platform::currentPlatform();
     require(!platform.operatingSystem.empty(), "platform info should expose operating system");
