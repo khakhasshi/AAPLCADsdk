@@ -23,32 +23,60 @@ AAPLCAD SDK is intended to provide the following capabilities for future profess
 
 ## Current Documents
 
+- [Changelog](CHANGELOG.md)
 - [Architecture Design](docs/AAPLCAD_SDK_Design.md)
 - [Development Plan](docs/AAPLCAD_Development_Plan.md)
 
 ## Current Scope
 
-This repository is currently in the design and planning stage, with focus on:
+This repository has entered the initial scaffold stage, with focus on:
 
 - SDK architecture definition
-- Module boundary design
+- module boundary design
 - Apple Silicon / Metal technical direction
-- Native macOS productivity workflows
-- Preparation for the initial repository scaffold and minimum prototypes
+- native macOS productivity workflows
+- Phase 1 project scaffold and minimum compile targets
 
-## Planned Repository Structure
+## Repository Structure
 
 ```text
 AAPLCADsdk/
+  CMakeLists.txt
   README.md
   LICENSE
   CONTRIBUTING.md
   docs/
   include/
   src/
+  apps/
+  plugins/
+  resources/
   tests/
   examples/
 ```
+
+## Getting Started
+
+Prerequisites:
+
+- macOS
+- CMake 3.20+
+- Apple Clang / Xcode command line tools
+
+Configure and build:
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Current scaffold includes:
+
+- a root `CMakeLists.txt`
+- initial `core` and `platform` headers / sources
+- a minimal example target
+- a basic unit test target
 
 ## License
 
@@ -75,14 +103,19 @@ Suggested priority areas for contribution:
 
 ## Status
 
-Current status: `Planning / Architecture`.
+Current status: `Bootstrap / Phase 1`.
 
-Before the repository enters the implementation phase, it will first complete:
+Completed:
 
 1. Root project and directory scaffold
-2. Initial Core / Geometry / Database APIs
-3. Minimum Metal Viewer prototype
-4. Basic testing and benchmarking framework
+2. Initial Core / Platform API placeholders
+3. Minimal example and unit test targets
+
+Next:
+
+1. Initial Geometry / Database APIs
+2. Minimum Metal Viewer prototype
+3. Basic testing and benchmarking expansion
 
 ---
 
@@ -116,27 +149,54 @@ AAPLCAD SDK 计划为后续专业级工程应用提供以下能力：
 
 ## 当前范围
 
-当前仓库处于设计与规划阶段，重点聚焦：
+当前仓库已进入初始工程骨架阶段，重点聚焦：
 
 - SDK 架构定义
 - 模块边界划分
 - Apple Silicon / Metal 技术路线
 - macOS 原生生产力工作流设计
-- 后续工程骨架与最小原型的落地准备
+- Phase 1 工程骨架与最小可编译目标
 
-## 仓库计划结构
+## 仓库结构
 
 ```text
 AAPLCADsdk/
+  CMakeLists.txt
   README.md
   LICENSE
   CONTRIBUTING.md
   docs/
   include/
   src/
+  apps/
+  plugins/
+  resources/
   tests/
   examples/
 ```
+
+## 快速开始
+
+前置条件：
+
+- macOS
+- CMake 3.20+
+- Apple Clang / Xcode Command Line Tools
+
+配置与构建：
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+当前骨架已包含：
+
+- 根级 `CMakeLists.txt`
+- 初始 `core` 与 `platform` 头文件 / 源文件
+- 最小示例目标
+- 基础单元测试目标
 
 ## 许可说明
 
@@ -163,11 +223,16 @@ AAPLCADsdk/
 
 ## 状态
 
-当前状态：`Planning / Architecture`。
+当前状态：`Bootstrap / Phase 1`。
 
-在进入代码阶段前，仓库会先完成：
+已完成：
 
 1. 根工程与目录骨架
-2. Core / Geometry / Database 初始 API
-3. Metal Viewer 最小原型
-4. 基础测试与 benchmark 框架
+2. 初始 Core / Platform API 占位
+3. 最小示例与单元测试目标
+
+下一步：
+
+1. Core / Geometry / Database 初始 API 扩展
+2. Metal Viewer 最小原型
+3. 基础测试与 benchmark 扩展
