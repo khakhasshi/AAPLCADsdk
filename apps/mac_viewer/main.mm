@@ -8,13 +8,14 @@
 #include "aaplcad/database/line_entity.h"
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/graphics/draw_list_2d.h"
+#include "aaplcad/graphics/view_interaction_state_2d.h"
 #include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
 #include "aaplcad/platform/platform.h"
 
+#include <memory>
 #include <array>
 #include <sstream>
-#include <memory>
 #include <string>
 
 struct ViewerVertex {
@@ -25,11 +26,9 @@ struct ViewerColor {
     float rgba[4];
 };
 
-static constexpr double kSingleFingerTapMaxTravel = 0.02;
-
-static NSPoint centroidForTouches(NSSet<NSTouch*>* touches) {
+static aaplcad::geometry::Point2d centroidForTouches(NSSet<NSTouch*>* touches) {
     if (touches.count == 0) {
-        return NSMakePoint(0.0, 0.0);
+        return {0.0, 0.0};
     }
 
     double sumX = 0.0;
@@ -39,8 +38,10 @@ static NSPoint centroidForTouches(NSSet<NSTouch*>* touches) {
         sumY += touch.normalizedPosition.y;
     }
 
-    return NSMakePoint(sumX / static_cast<double>(touches.count),
-                       sumY / static_cast<double>(touches.count));
+    return {
+        sumX / static_cast<double>(touches.count),
+        sumY / static_cast<double>(touches.count),
+    };
 }
 
 static NSString* const kAAPLCADLineShaderSource = @R"(
@@ -96,13 +97,9 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 @interface AAPLViewerView : MTKView <MTKViewDelegate> {
 @private
     aaplcad::graphics::ViewState2d _viewState;
+    aaplcad::graphics::ViewInteractionState2d _interactionState;
     aaplcad::database::Document _document;
     aaplcad::core::ObjectId _selectedEntityId;
-    bool _isDraggingView;
-    bool _singleFingerTapCandidate;
-    NSPoint _singleFingerTapStart;
-    NSPoint _lastThreeFingerCentroid;
-    bool _hasThreeFingerCentroid;
     NSTextField* _debugCoordinateLabel;
     NSTrackingArea* _trackingArea;
     id<MTLCommandQueue> _commandQueue;
@@ -224,7 +221,7 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 
 - (void)handleSelectionEvent:(NSEvent*)event {
     [[self window] makeFirstResponder:self];
-    _isDraggingView = YES;
+    _interactionState.beginPointerDrag();
 
     const std::string eventDescription = aaplcad::platform::describe(makePointerEvent(event, aaplcad::platform::InputAction::buttonDown));
     aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, eventDescription);
@@ -239,7 +236,7 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 }
 
 - (void)handlePanEvent:(NSEvent*)event {
-    if (!_isDraggingView) {
+    if (!_interactionState.isPointerDragging()) {
         return;
     }
 
@@ -248,13 +245,14 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     const std::string eventDescription = aaplcad::platform::describe(makePointerEvent(event, aaplcad::platform::InputAction::move));
     aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, eventDescription);
 
-    _viewState.panByScreenDelta([event deltaX], -[event deltaY]);
-    [self setNeedsDisplay:YES];
+    if (_interactionState.applyPointerPan(_viewState, [event deltaX], -[event deltaY])) {
+        [self setNeedsDisplay:YES];
+    }
 }
 
 - (void)handleMouseUpEvent:(NSEvent*)event {
     (void)event;
-    _isDraggingView = NO;
+    _interactionState.endPointerDrag();
 }
 
 - (BOOL)containsWindowPoint:(NSPoint)windowPoint {
@@ -327,11 +325,6 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
         self.allowedTouchTypes = NSTouchTypeMaskIndirect;
         _viewState = aaplcad::graphics::ViewState2d{};
         _selectedEntityId = aaplcad::core::ObjectId{};
-        _isDraggingView = NO;
-        _singleFingerTapCandidate = NO;
-        _singleFingerTapStart = NSMakePoint(0.0, 0.0);
-        _lastThreeFingerCentroid = NSMakePoint(0.0, 0.0);
-        _hasThreeFingerCentroid = NO;
         _debugCoordinateLabel = [[NSTextField alloc] initWithFrame:NSZeroRect];
         _debugCoordinateLabel.editable = NO;
         _debugCoordinateLabel.bezeled = NO;
@@ -458,10 +451,10 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 
 - (void)magnifyWithEvent:(NSEvent*)event {
     const NSPoint location = [self renderPointFromEvent:event];
-    const double zoomFactor = 1.0 + [event magnification];
-    _viewState.zoomAtScreenPoint(zoomFactor, location.x, location.y);
-    aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer zoom updated");
-    [self setNeedsDisplay:YES];
+    if (_interactionState.applyMagnify(_viewState, [event magnification], {location.x, location.y})) {
+        aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer zoom updated");
+        [self setNeedsDisplay:YES];
+    }
 }
 
 - (void)mouseDown:(NSEvent*)event {
@@ -505,16 +498,8 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     [super touchesBeganWithEvent:event];
 
     NSSet<NSTouch*>* activeTouches = [event touchesMatchingPhase:NSTouchPhaseTouching | NSTouchPhaseBegan inView:self];
-    if (activeTouches.count == 1) {
-        _singleFingerTapCandidate = YES;
-        _singleFingerTapStart = centroidForTouches(activeTouches);
-    } else {
-        _singleFingerTapCandidate = NO;
-    }
-
+    _interactionState.beginTouchSequence(activeTouches.count, centroidForTouches(activeTouches));
     if (activeTouches.count == 3) {
-        _hasThreeFingerCentroid = YES;
-        _lastThreeFingerCentroid = centroidForTouches(activeTouches);
         aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer three-finger gesture began");
     }
 }
@@ -523,49 +508,32 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     [super touchesMovedWithEvent:event];
 
     NSSet<NSTouch*>* activeTouches = [event touchesMatchingPhase:NSTouchPhaseTouching | NSTouchPhaseStationary inView:self];
-    if (activeTouches.count == 1 && _singleFingerTapCandidate) {
-        const NSPoint centroid = centroidForTouches(activeTouches);
-        const double deltaX = centroid.x - _singleFingerTapStart.x;
-        const double deltaY = centroid.y - _singleFingerTapStart.y;
-        if ((deltaX * deltaX + deltaY * deltaY) > (kSingleFingerTapMaxTravel * kSingleFingerTapMaxTravel)) {
-            _singleFingerTapCandidate = NO;
-        }
+    if (_interactionState.updateTouchSequence(_viewState,
+                                              activeTouches.count,
+                                              centroidForTouches(activeTouches),
+                                              self.bounds.size.width,
+                                              self.bounds.size.height)) {
+        [self setNeedsDisplay:YES];
     }
 
     if (activeTouches.count == 3) {
-        const NSPoint centroid = centroidForTouches(activeTouches);
-        if (_hasThreeFingerCentroid) {
-            const double deltaX = (centroid.x - _lastThreeFingerCentroid.x) * self.bounds.size.width;
-            const double deltaY = (centroid.y - _lastThreeFingerCentroid.y) * self.bounds.size.height;
-            _viewState.panByScreenDelta(deltaX, deltaY);
-            [self setNeedsDisplay:YES];
-        }
-
-        _lastThreeFingerCentroid = centroid;
-        _hasThreeFingerCentroid = YES;
         aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer three-finger pan updated");
-        return;
     }
-
-    _hasThreeFingerCentroid = NO;
 }
 
 - (void)touchesEndedWithEvent:(NSEvent*)event {
     [super touchesEndedWithEvent:event];
 
     NSSet<NSTouch*>* endingTouches = [event touchesMatchingPhase:NSTouchPhaseEnded inView:self];
-    if (_singleFingerTapCandidate && endingTouches.count == 1) {
-        [self handleIndirectTouchSelectionAtNormalizedPoint:centroidForTouches(endingTouches)];
+    const auto normalizedPoint = _interactionState.endTouchSequence(endingTouches.count, centroidForTouches(endingTouches));
+    if (normalizedPoint.has_value()) {
+        [self handleIndirectTouchSelectionAtNormalizedPoint:NSMakePoint(normalizedPoint->x, normalizedPoint->y)];
     }
-
-    _singleFingerTapCandidate = NO;
-    _hasThreeFingerCentroid = NO;
 }
 
 - (void)touchesCancelledWithEvent:(NSEvent*)event {
     [super touchesCancelledWithEvent:event];
-    _singleFingerTapCandidate = NO;
-    _hasThreeFingerCentroid = NO;
+    _interactionState.cancelTouchSequence();
 }
 
 - (void)keyDown:(NSEvent*)event {

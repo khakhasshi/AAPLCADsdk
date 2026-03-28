@@ -7,11 +7,13 @@
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/geometry/point2d.h"
 #include "aaplcad/graphics/draw_list_2d.h"
+#include "aaplcad/graphics/view_interaction_state_2d.h"
 #include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
 #include "aaplcad/platform/platform.h"
 
 #include <cstdlib>
+#include <cmath>
 #include <iostream>
 
 namespace {
@@ -21,6 +23,10 @@ void require(bool condition, const char* message) {
         std::cerr << "test failure: " << message << '\n';
         std::exit(1);
     }
+}
+
+void requireNear(double actual, double expected, double tolerance, const char* message) {
+    require(std::abs(actual - expected) <= tolerance, message);
 }
 
 }  // namespace
@@ -116,6 +122,43 @@ int main() {
     farAwayViewState.panByScreenDelta(-1000.0, -1000.0);
     const auto culledDrawList = aaplcad::graphics::buildDrawList2d(document, farAwayViewState, 100.0, 100.0);
     require(culledDrawList.lineSegments.empty(), "draw list should cull off-screen geometry");
+
+    aaplcad::graphics::ViewInteractionState2d interactionState;
+    aaplcad::graphics::ViewState2d pointerDragViewState;
+    require(!interactionState.isPointerDragging(), "pointer dragging should start disabled");
+    require(!interactionState.applyPointerPan(pointerDragViewState, 3.0, 4.0), "pointer pan should be ignored when dragging is inactive");
+    interactionState.beginPointerDrag();
+    require(interactionState.isPointerDragging(), "pointer dragging should activate after beginPointerDrag");
+    require(interactionState.applyPointerPan(pointerDragViewState, 5.0, -2.0), "pointer pan should apply while dragging is active");
+    requireNear(pointerDragViewState.panX(), 5.0, 1e-9, "pointer pan should update x offset");
+    requireNear(pointerDragViewState.panY(), -2.0, 1e-9, "pointer pan should update y offset");
+    interactionState.endPointerDrag();
+    require(!interactionState.isPointerDragging(), "pointer dragging should deactivate after endPointerDrag");
+
+    aaplcad::graphics::ViewState2d touchViewState;
+    interactionState.beginTouchSequence(1, {0.25, 0.50});
+    interactionState.updateTouchSequence(touchViewState, 1, {0.255, 0.505}, 800.0, 600.0);
+    const auto tapPoint = interactionState.endTouchSequence(1, {0.255, 0.505});
+    require(tapPoint.has_value(), "small single-finger motion should remain a tap candidate");
+
+    interactionState.beginTouchSequence(1, {0.10, 0.10});
+    interactionState.updateTouchSequence(touchViewState, 1, {0.25, 0.25}, 800.0, 600.0);
+    const auto cancelledTap = interactionState.endTouchSequence(1, {0.25, 0.25});
+    require(!cancelledTap.has_value(), "large single-finger motion should cancel tap selection");
+
+    interactionState.beginTouchSequence(3, {0.50, 0.50});
+    require(!interactionState.updateTouchSequence(touchViewState, 3, {0.50, 0.50}, 800.0, 600.0), "initial three-finger update should only seed centroid state");
+    require(interactionState.updateTouchSequence(touchViewState, 3, {0.60, 0.55}, 800.0, 600.0), "subsequent three-finger update should pan the view");
+    requireNear(touchViewState.panX(), 80.0, 1e-9, "three-finger pan should scale normalized x delta into screen-space pan");
+    requireNear(touchViewState.panY(), 30.0, 1e-9, "three-finger pan should scale normalized y delta into screen-space pan");
+
+    const auto worldAnchorBeforeMagnify = touchViewState.screenToWorld({400.0, 300.0});
+    require(interactionState.applyMagnify(touchViewState, 0.25, {400.0, 300.0}), "positive magnification should zoom the view");
+    const auto worldAnchorAfterMagnify = touchViewState.screenToWorld({400.0, 300.0});
+    require(worldAnchorBeforeMagnify.x == worldAnchorAfterMagnify.x &&
+                worldAnchorBeforeMagnify.y == worldAnchorAfterMagnify.y,
+            "magnify should keep the zoom anchor stable in world space");
+    require(!interactionState.applyMagnify(touchViewState, -1.1, {400.0, 300.0}), "invalid negative magnification should be rejected");
 
     const auto platform = aaplcad::platform::currentPlatform();
     require(!platform.operatingSystem.empty(), "platform info should expose operating system");
