@@ -24,6 +24,7 @@ AAPLCAD SDK is intended to provide the following capabilities for future profess
 ## Current Documents
 
 - [Changelog](CHANGELOG.md)
+- [Current Status](docs/CURRENT_STATUS.md)
 - [Architecture Design](docs/AAPLCAD_SDK_Design.md)
 - [Development Plan](docs/AAPLCAD_Development_Plan.md)
 
@@ -126,6 +127,8 @@ Next:
 2. Basic testing and benchmarking expansion
 3. Selection, picking, and navigation prototype wiring
 
+For short handoff context, see [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md).
+
 ---
 
 # AAPLCAD SDK
@@ -153,6 +156,7 @@ AAPLCAD SDK 计划为后续专业级工程应用提供以下能力：
 
 ## 当前文档
 
+- [当前状态与交接说明](docs/CURRENT_STATUS.md)
 - [总体设计文档](docs/AAPLCAD_SDK_Design.md)
 - [开发规划文档](docs/AAPLCAD_Development_Plan.md)
 
@@ -254,3 +258,5 @@ ctest --test-dir build --output-on-failure
 1. macOS 输入抽象扩展到 trackpad / keyboard 语义
 2. 基础测试与 benchmark 扩展
 3. 选择、拾取与导航原型接线
+
+如需快速交接上下文，可先看 [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md)。

@@ -4,6 +4,7 @@
 
 #include "aaplcad/aaplcad.h"
 #include "aaplcad/core/log.h"
+#include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
 #include "aaplcad/platform/platform.h"
 
@@ -41,7 +42,10 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     };
 }
 
-@interface AAPLViewerView : MTKView <MTKViewDelegate>
+@interface AAPLViewerView : MTKView <MTKViewDelegate> {
+@private
+    aaplcad::graphics::ViewState2d _viewState;
+}
 @end
 
 @implementation AAPLViewerView
@@ -56,6 +60,7 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
         self.preferredFramesPerSecond = 60;
         self.enableSetNeedsDisplay = NO;
         self.paused = NO;
+        _viewState = aaplcad::graphics::ViewState2d{};
     }
     return self;
 }
@@ -65,6 +70,10 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 }
 
 - (void)drawInMTKView:(MTKView*)view {
+    const double zoom = _viewState.zoom();
+    const double tint = zoom < 1.0 ? 0.0 : (zoom - 1.0) / 4.0;
+    self.clearColor = MTLClearColorMake(0.10 + tint * 0.2, 0.12, 0.16 + tint * 0.3, 1.0);
+
     id<CAMetalDrawable> drawable = view.currentDrawable;
     MTLRenderPassDescriptor* renderPassDescriptor = view.currentRenderPassDescriptor;
     if (drawable == nil || renderPassDescriptor == nil) {
@@ -87,7 +96,16 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 - (void)scrollWheel:(NSEvent*)event {
     const std::string message = aaplcad::platform::describe(makePointerEvent(event, aaplcad::platform::InputAction::scroll));
     aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, message);
-    [super scrollWheel:event];
+    _viewState.panByScreenDelta([event scrollingDeltaX], -[event scrollingDeltaY]);
+    [self setNeedsDisplay:YES];
+}
+
+- (void)magnifyWithEvent:(NSEvent*)event {
+    const NSPoint location = [self convertPoint:[event locationInWindow] fromView:nil];
+    const double zoomFactor = 1.0 + [event magnification];
+    _viewState.zoomAtScreenPoint(zoomFactor, location.x, location.y);
+    aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer zoom updated");
+    [self setNeedsDisplay:YES];
 }
 
 - (void)mouseDown:(NSEvent*)event {
@@ -99,7 +117,19 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 - (void)mouseDragged:(NSEvent*)event {
     const std::string message = aaplcad::platform::describe(makePointerEvent(event, aaplcad::platform::InputAction::move));
     aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, message);
-    [super mouseDragged:event];
+    _viewState.panByScreenDelta([event deltaX], -[event deltaY]);
+    [self setNeedsDisplay:YES];
+}
+
+- (void)keyDown:(NSEvent*)event {
+    if ([[event charactersIgnoringModifiers] isEqualToString:@"0"]) {
+        _viewState.reset();
+        aaplcad::core::logMessage(aaplcad::core::LogLevel::info, "viewer state reset");
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
+    [super keyDown:event];
 }
 
 @end

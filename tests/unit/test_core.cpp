@@ -6,6 +6,7 @@
 #include "aaplcad/geometry/circle2d.h"
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/geometry/point2d.h"
+#include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
 #include "aaplcad/platform/platform.h"
 
@@ -82,6 +83,20 @@ int main() {
     };
     const auto description = aaplcad::platform::describe(pointerEvent);
     require(description.find("trackpad:scroll") != std::string::npos, "pointer event description should include device and action");
+
+    aaplcad::graphics::ViewState2d viewState;
+    viewState.panByScreenDelta(20.0, -10.0);
+    require(viewState.panX() == 20.0 && viewState.panY() == -10.0, "view state should update pan offsets");
+
+    const auto anchorBefore = viewState.screenToWorld({100.0, 100.0});
+    viewState.zoomAtScreenPoint(1.5, 100.0, 100.0);
+    require(viewState.zoom() > 1.0, "view state should increase zoom after zoomAtScreenPoint");
+    const auto anchorAfter = viewState.screenToWorld({100.0, 100.0});
+    require(anchorBefore.x == anchorAfter.x && anchorBefore.y == anchorAfter.y, "zoom anchor should stay stable in world space");
+
+    const auto screenPoint = viewState.worldToScreen({4.0, 6.0});
+    const auto worldPoint = viewState.screenToWorld(screenPoint);
+    require(worldPoint.x == 4.0 && worldPoint.y == 6.0, "world/screen transforms should round-trip");
 
     const auto platform = aaplcad::platform::currentPlatform();
     require(!platform.operatingSystem.empty(), "platform info should expose operating system");

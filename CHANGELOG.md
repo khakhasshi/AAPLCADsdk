@@ -13,6 +13,7 @@ The format is based on Keep a Changelog, and this project follows a pre-release 
 - Initial `platform` module placeholder for platform detection and platform capability reporting.
 - Initial `platform` input abstraction placeholder for pointer devices and modifier mapping.
 - Initial `geometry` module placeholders for `Point2d`, `Line2d`, `Circle2d`, and `Extents2d`.
+- Initial `graphics` view-state placeholder for 2D pan / zoom math.
 - Initial `database` module placeholders for `Document`, `Layer`, `Transaction`, base `Entity`, and `LineEntity`.
 - Minimal example target under `examples/minimal_viewer/`.
 - macOS AppKit + Metal viewer prototype under `apps/mac_viewer/`.
@@ -25,6 +26,7 @@ The format is based on Keep a Changelog, and this project follows a pre-release 
 - Added initial build instructions and repository structure overview.
 - Updated the minimal example to create a demo document, layer, and line entity through the new Phase 2-facing APIs.
 - Updated the build to include an Objective-C++ macOS viewer target linked with AppKit and MetalKit.
+- Updated the macOS viewer prototype to use a reusable 2D view state for pan / zoom / reset interaction.
 
 ### Known Issues
-- The macOS viewer is currently a prototype shell with clear-pass rendering and basic input logging only; navigation, picking, and draw-list rendering are still pending.
+- The macOS viewer now supports basic pan / zoom state, but still lacks geometry draw-list rendering, selection, and picking.
