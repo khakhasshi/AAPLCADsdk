@@ -1,5 +1,7 @@
 #include "aaplcad/graphics/draw_list_2d.h"
 
+#include <cmath>
+
 #include "aaplcad/database/document.h"
 #include "aaplcad/database/entity.h"
 #include "aaplcad/database/line_entity.h"
@@ -29,6 +31,26 @@ geometry::Extents2d makeScreenExtents(geometry::Point2d a, geometry::Point2d b) 
     };
 }
 
+double squaredDistanceToSegment(geometry::Point2d point, const LineSegment2d& segment) noexcept {
+    const double deltaX = segment.end.x - segment.start.x;
+    const double deltaY = segment.end.y - segment.start.y;
+    const double segmentLengthSquared = deltaX * deltaX + deltaY * deltaY;
+
+    if (segmentLengthSquared == 0.0) {
+        const double pointDeltaX = point.x - segment.start.x;
+        const double pointDeltaY = point.y - segment.start.y;
+        return pointDeltaX * pointDeltaX + pointDeltaY * pointDeltaY;
+    }
+
+    const double projection = ((point.x - segment.start.x) * deltaX + (point.y - segment.start.y) * deltaY) / segmentLengthSquared;
+    const double clampedProjection = projection < 0.0 ? 0.0 : (projection > 1.0 ? 1.0 : projection);
+    const double nearestX = segment.start.x + clampedProjection * deltaX;
+    const double nearestY = segment.start.y + clampedProjection * deltaY;
+    const double nearestDeltaX = point.x - nearestX;
+    const double nearestDeltaY = point.y - nearestY;
+    return nearestDeltaX * nearestDeltaX + nearestDeltaY * nearestDeltaY;
+}
+
 }  // namespace
 
 DrawList2d buildDrawList2d(const database::Document& document,
@@ -54,10 +76,35 @@ DrawList2d buildDrawList2d(const database::Document& document,
             continue;
         }
 
-        drawList.lineSegments.push_back({screenStart, screenEnd});
+        drawList.lineSegments.push_back({entity->id(), screenStart, screenEnd});
     }
 
     return drawList;
+}
+
+std::optional<SelectionHit2d> pickLineSegmentAtScreenPoint(const DrawList2d& drawList,
+                                                           geometry::Point2d screenPoint,
+                                                           double tolerance) {
+    if (tolerance < 0.0) {
+        return std::nullopt;
+    }
+
+    const double toleranceSquared = tolerance * tolerance;
+    std::optional<SelectionHit2d> closestHit;
+
+    for (const auto& segment : drawList.lineSegments) {
+        const double squaredDistance = squaredDistanceToSegment(screenPoint, segment);
+        if (squaredDistance > toleranceSquared) {
+            continue;
+        }
+
+        const double distance = std::sqrt(squaredDistance);
+        if (!closestHit.has_value() || distance < closestHit->distance) {
+            closestHit = SelectionHit2d{segment.entityId, distance};
+        }
+    }
+
+    return closestHit;
 }
 
 }  // namespace aaplcad::graphics

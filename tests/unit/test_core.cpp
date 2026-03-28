@@ -102,7 +102,15 @@ int main() {
     aaplcad::graphics::ViewState2d drawListViewState;
     const auto drawList = aaplcad::graphics::buildDrawList2d(document, drawListViewState, 500.0, 500.0);
     require(drawList.lineSegments.size() == 1, "draw list should include visible line entities");
+    require(drawList.lineSegments.front().entityId == entityResult.value(), "draw list should preserve entity id for picking");
     require(drawList.lineSegments.front().start.x == 0.0, "draw list should transform line start x");
+
+    const auto pickHit = aaplcad::graphics::pickLineSegmentAtScreenPoint(drawList, {2.0, 2.0}, 4.0);
+    require(pickHit.has_value(), "picking should hit the visible line when within tolerance");
+    require(pickHit->entityId == entityResult.value(), "picking should return the matching entity id");
+
+    const auto missHit = aaplcad::graphics::pickLineSegmentAtScreenPoint(drawList, {200.0, 200.0}, 4.0);
+    require(!missHit.has_value(), "picking should miss when no line is within tolerance");
 
     aaplcad::graphics::ViewState2d farAwayViewState;
     farAwayViewState.panByScreenDelta(-1000.0, -1000.0);

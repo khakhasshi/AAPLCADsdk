@@ -37,11 +37,11 @@ The macOS viewer currently provides:
 - reusable 2D view state
 - basic pan and zoom interaction
 - minimal 2D document line rendering through a reusable draw-list builder
+- screen-space click selection for line entities with highlight feedback
 - input event logging and reset behavior
 
 The viewer does not yet provide:
 
-- selection / picking
 - object snap or command interaction
 
 ## Active Development Direction
@@ -53,6 +53,7 @@ The next active implementation target is:
 3. render visible geometry through the current view state
 4. keep the logic testable outside AppKit where possible
 5. expand beyond line-only rendering into richer draw-list content
+6. deepen selection / picking beyond line-only screen-space prototype
 
 ## Recommended Next Steps
 
@@ -62,6 +63,7 @@ Short-term priority:
 - add unit tests for pan / zoom math
 - render a minimal 2D draw list using the current view state
 - begin selection / picking prototype work
+- expand the current line-selection prototype into reusable picking infrastructure
 
 After that:
 
