@@ -1,0 +1,66 @@
+AAPLCAD Non-Commercial Source License 1.0
+
+Copyright (c) 2026 AAPLCAD Contributors
+
+1. Definitions
+
+"Software" means all source code, documentation, examples, assets, and other materials contained in this repository.
+
+"You" means any individual or legal entity exercising permissions under this license.
+
+"Non-Commercial Use" means use of the Software solely for personal learning, research, evaluation, teaching, academic work, internal non-commercial prototyping, or non-commercial open collaboration, where no fee, revenue, commercial advantage, or commercial product or service is derived from the Software or any derivative work.
+
+"Commercial Use" means any use of the Software or derivative works that is intended for or results in direct or indirect commercial advantage, revenue, internal business use, paid services, customer delivery, product integration, SaaS, consulting, support, or any for-profit activity.
+
+2. License Grant
+
+Subject to the terms of this license, You are granted a limited, worldwide, non-exclusive, non-transferable, revocable license to:
+
+- use the Software for Non-Commercial Use;
+- copy and modify the Software for Non-Commercial Use; and
+- share the original or modified Software for Non-Commercial Use only, provided that this license is included in full and all copyright and attribution notices are preserved.
+
+3. Commercial Use Restriction
+
+You may not use the Software, or any modified or derivative version of the Software, for any Commercial Use without prior written permission from the copyright holder(s).
+
+Without limitation, the following are prohibited unless separately licensed in writing:
+
+- selling the Software or derivative works;
+- incorporating the Software into paid products, services, or internal business systems;
+- offering hosted, managed, or subscription access based on the Software;
+- using the Software in contract work, consulting engagements, or customer projects for compensation; and
+- redistributing the Software as part of a commercial offering.
+
+4. Redistribution Conditions
+
+If You redistribute the Software or derivative works for Non-Commercial Use, You must:
+
+- provide a copy of this license;
+- clearly state that the work is based on AAPLCAD SDK;
+- identify significant modifications, if any; and
+- not remove existing copyright or attribution notices.
+
+5. Contributions
+
+Unless explicitly stated otherwise in writing, any contribution intentionally submitted to this repository is provided under this same license.
+
+6. No Trademark License
+
+This license does not grant permission to use the name "AAPLCAD", project logos, or contributor names for endorsement, branding, or promotion without prior written permission.
+
+7. Termination
+
+Any rights granted under this license terminate automatically if You breach its terms. Upon termination, You must stop using and redistributing the Software until You obtain explicit written reinstatement.
+
+8. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+9. Limitation of Liability
+
+IN NO EVENT SHALL ANY COPYRIGHT HOLDER OR CONTRIBUTOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+10. Clarification
+
+This is a source-available non-commercial license. It is not intended to be an OSI-approved open source license.
