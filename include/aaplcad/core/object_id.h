@@ -19,7 +19,13 @@ public:
         return value_ != 0;
     }
 
-    friend constexpr bool operator==(ObjectId lhs, ObjectId rhs) noexcept = default;
+    friend constexpr bool operator==(ObjectId lhs, ObjectId rhs) noexcept {
+        return lhs.value_ == rhs.value_;
+    }
+
+    friend constexpr bool operator!=(ObjectId lhs, ObjectId rhs) noexcept {
+        return !(lhs == rhs);
+    }
 
 private:
     std::uint64_t value_ = 0;
