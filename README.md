@@ -1,14 +1,102 @@
 # AAPLCAD SDK
 
-AAPLCAD SDK 是一个面向 macOS 与 Apple Silicon 的现代 CAD SDK，目标不是移植传统 CAD 平台，而是从几何、显示、交互三层出发，构建一个真正服务 macOS 生产力场景的专业工程底座。
+AAPLCAD SDK is a modern CAD SDK for macOS and Apple Silicon. Its goal is not to port a traditional CAD platform to macOS, but to build a professional engineering foundation for native macOS productivity workflows by rethinking geometry, rendering, and interaction together.
+
+## Positioning
+
+- `macOS-first`: macOS is the only target platform for the current roadmap
+- `Apple Silicon-first`: designed around M-series CPU, GPU, and unified memory characteristics
+- `Metal-first`: rendering, picking, transient feedback, and the view pipeline are built around Metal
+- `Productivity-first`: optimized for multi-window, multi-display, trackpad, keyboard/mouse, and document workflows
+- `No legacy baggage`: avoids the black-box dependencies, historical APIs, and licensing baggage of traditional CAD SDKs
+
+## Goals
+
+AAPLCAD SDK is intended to provide the following capabilities for future professional engineering applications:
+
+- 2D / 3D geometry modeling and topology representation
+- High-precision constraints and parametric design
+- High-performance display and interaction for large drawings and large models
+- Interoperability with formats such as DXF / DWG
+- Native workflow support for desktop productivity scenarios
+- Stable SDK APIs and an extensibility model
+
+## Current Documents
+
+- [Architecture Design](docs/AAPLCAD_SDK_Design.md)
+- [Development Plan](docs/AAPLCAD_Development_Plan.md)
+
+## Current Scope
+
+This repository is currently in the design and planning stage, with focus on:
+
+- SDK architecture definition
+- Module boundary design
+- Apple Silicon / Metal technical direction
+- Native macOS productivity workflows
+- Preparation for the initial repository scaffold and minimum prototypes
+
+## Planned Repository Structure
+
+```text
+AAPLCADsdk/
+  README.md
+  LICENSE
+  CONTRIBUTING.md
+  docs/
+  include/
+  src/
+  tests/
+  examples/
+```
+
+## License
+
+This repository is licensed under the standard open source [Apache-2.0](LICENSE) license.
+
+This means:
+
+- commercial and non-commercial use are allowed
+- modification, redistribution, and derivative works are allowed
+- license and copyright notices must be preserved
+- patent grant and warranty disclaimer are explicitly included
+
+## Contributing
+
+Contributions around design, architecture, prototypes, testing, and documentation are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
+
+Suggested priority areas for contribution:
+
+- Core / Geometry / Database API drafts
+- Metal Viewer prototypes
+- macOS input abstraction and command workflow design
+- DXF / data model design
+- performance tests and regression baselines
+
+## Status
+
+Current status: `Planning / Architecture`.
+
+Before the repository enters the implementation phase, it will first complete:
+
+1. Root project and directory scaffold
+2. Initial Core / Geometry / Database APIs
+3. Minimum Metal Viewer prototype
+4. Basic testing and benchmarking framework
+
+---
+
+# AAPLCAD SDK
+
+AAPLCAD SDK 是一个面向 macOS 与 Apple Silicon 的现代 CAD SDK。它的目标不是把传统 CAD 平台移植到 macOS，而是从几何、渲染、交互三层一起重构，构建一个真正服务 macOS 原生生产力工作流的专业工程底座。
 
 ## 定位
 
-- `macOS-first`：当前唯一目标平台是 macOS
-- `Apple Silicon-first`：围绕 M 系列芯片的 CPU、GPU、统一内存特性设计
-- `Metal-first`：渲染、拾取、瞬态反馈、视图管线均以 Metal 为核心
-- `Productivity-first`：强调多窗口、多显示器、触控板、键盘鼠标、文档工作流
-- `No legacy baggage`：不背负传统 CAD SDK 的黑盒、历史 API 和许可证包袱
+- `macOS-first`：当前路线图的唯一目标平台是 macOS
+- `Apple Silicon-first`：围绕 M 系列芯片的 CPU、GPU 与统一内存特性设计
+- `Metal-first`：渲染、拾取、瞬态反馈与视图管线都以 Metal 为核心
+- `Productivity-first`：强调多窗口、多显示器、触控板、键盘鼠标与文档工作流
+- `No legacy baggage`：避免传统 CAD SDK 的黑盒依赖、历史 API 和许可证包袱
 
 ## 目标
 
@@ -18,7 +106,7 @@ AAPLCAD SDK 计划为后续专业级工程应用提供以下能力：
 - 高精度约束求解与参数化设计
 - 大图纸 / 大模型的高性能显示与交互
 - DXF / DWG 等格式互操作能力
-- 面向桌面生产力平台的原生工作流支持
+- 面向桌面生产力场景的原生工作流支持
 - 稳定的 SDK API 与扩展机制
 
 ## 当前文档
