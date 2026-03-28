@@ -30,13 +30,13 @@ AAPLCAD SDK is intended to provide the following capabilities for future profess
 
 ## Current Scope
 
-This repository has entered the initial scaffold stage, with focus on:
+This repository is now in an early viewer-interaction prototype stage, with focus on:
 
 - SDK architecture definition
 - module boundary design
 - Apple Silicon / Metal technical direction
 - native macOS productivity workflows
-- Phase 1 project scaffold and minimum compile targets
+- Phase 2 2D viewer interaction and picking prototype
 
 ## Repository Structure
 
@@ -79,6 +79,9 @@ Current scaffold includes:
 - a minimal console example target
 - a macOS AppKit + Metal viewer prototype target
 - a basic unit test target
+- reusable 2D view-state and draw-list helpers
+- line rendering, line picking, and highlight feedback in the macOS viewer
+- a house-sketch demo scene for navigation / interaction testing
 
 Run the prototypes:
 
@@ -112,20 +115,21 @@ Suggested priority areas for contribution:
 
 ## Status
 
-Current status: `Bootstrap / Phase 1`.
+Current status: `Phase 2 viewer interaction prototype`.
 
 Completed:
 
 1. Root project and directory scaffold
-2. Initial Core / Platform API placeholders
-3. Initial Geometry / Database API placeholders
-4. Minimal example, macOS Metal viewer prototype, and unit test targets
+2. Initial Core / Platform / Geometry / Database API placeholders
+3. Minimal example, macOS Metal viewer prototype, and unit test targets
+4. Reusable 2D view-state, draw-list generation, and line-picking helpers
+5. Viewer-side line rendering, selection highlight, drag pan, and debug coordinate overlay
 
 Next:
 
-1. macOS input abstraction expansion for trackpad / keyboard semantics
-2. Basic testing and benchmarking expansion
-3. Selection, picking, and navigation prototype wiring
+1. Restore and harden two-finger pinch zoom behavior
+2. Expand picking and rendering beyond line-only content
+3. Extract viewer interaction logic into reusable components and add deeper regression coverage
 
 For short handoff context, see [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md).
 
@@ -162,13 +166,13 @@ AAPLCAD SDK 计划为后续专业级工程应用提供以下能力：
 
 ## 当前范围
 
-当前仓库已进入初始工程骨架阶段，重点聚焦：
+当前仓库已进入早期 Viewer 交互原型阶段，重点聚焦：
 
 - SDK 架构定义
 - 模块边界划分
 - Apple Silicon / Metal 技术路线
 - macOS 原生生产力工作流设计
-- Phase 1 工程骨架与最小可编译目标
+- Phase 2 二维视图交互与拾取原型
 
 ## 仓库结构
 
@@ -211,6 +215,9 @@ ctest --test-dir build --output-on-failure
 - 最小控制台示例目标
 - macOS AppKit + Metal viewer 原型目标
 - 基础单元测试目标
+- 可复用的二维视图状态与 draw-list 辅助能力
+- Viewer 中的直线渲染、拾取与高亮反馈
+- 用于导航 / 交互测试的房屋简笔画示例场景
 
 运行原型：
 
@@ -244,13 +251,23 @@ ctest --test-dir build --output-on-failure
 
 ## 状态
 
-当前状态：`Bootstrap / Phase 1`。
+当前状态：`Phase 2 Viewer 交互原型`。
 
 已完成：
 
 1. 根工程与目录骨架
-2. 初始 Core / Platform API 占位
-3. 初始 Geometry / Database API 占位
+2. 初始 Core / Platform / Geometry / Database API 占位
+3. 最小示例、macOS Metal Viewer 原型与基础单元测试目标
+4. 可复用的二维视图状态、draw-list 生成与直线拾取辅助能力
+5. Viewer 侧直线渲染、选中高亮、拖拽平移与坐标调试叠加层
+
+下一步：
+
+1. 恢复并加固双指缩放行为
+2. 将渲染与拾取能力从仅直线扩展到更多实体类型
+3. 把 Viewer 交互逻辑从 `main.mm` 中继续拆分，并补充更深的回归验证
+
+简短交接说明见 [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md)。
 4. 最小示例、macOS Metal viewer 原型与单元测试目标
 
 下一步：

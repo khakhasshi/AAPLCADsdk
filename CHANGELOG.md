@@ -20,6 +20,8 @@ The format is based on Keep a Changelog, and this project follows a pre-release 
 - Basic unit test target under `tests/unit/`.
 - Initial 2D draw-list builder for visible line entities based on `Document` + `ViewState2d`.
 - Initial screen-space picking helper for line segments carried through the draw-list path.
+- Viewer debug coordinate overlay showing current `screen` and `world` cursor position.
+- House-sketch demo geometry for viewer interaction regression testing.
 - Extended repository directory skeleton for future `apps`, `plugins`, `resources`, integration tests, and performance tests.
 - Root `.gitignore` for local build artifacts and editor noise.
 
@@ -31,6 +33,10 @@ The format is based on Keep a Changelog, and this project follows a pre-release 
 - Updated the macOS viewer prototype to use a reusable 2D view state for pan / zoom / reset interaction.
 - Updated the macOS viewer prototype to render simple document line geometry through the new draw-list path.
 - Updated the macOS viewer prototype to support click selection and highlight for line entities.
+- Updated the macOS viewer prototype to support drag-pan, trackpad scroll direction tuning, single-finger tap selection, and three-finger pan.
+- Updated the macOS viewer prototype to keep render-space and pick-space coordinates consistent for selection debugging.
+- Updated the viewer demo scene from simple test lines to an upright house sketch.
 
 ### Known Issues
-- The macOS viewer now supports basic pan / zoom state, but still lacks geometry draw-list rendering, selection, and picking.
+- Two-finger pinch zoom needs follow-up verification after the recent custom touch-handling changes.
+- The macOS viewer interaction logic is still concentrated in `apps/mac_viewer/main.mm` and should be split into reusable pieces.
