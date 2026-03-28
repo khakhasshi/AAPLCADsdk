@@ -6,6 +6,7 @@
 #include "aaplcad/geometry/circle2d.h"
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/geometry/point2d.h"
+#include "aaplcad/platform/input_event.h"
 #include "aaplcad/platform/platform.h"
 
 #include <cstdlib>
@@ -69,6 +70,18 @@ int main() {
 
     const auto transaction = document.beginTransaction();
     require(transaction.isActive(), "new transaction should be active");
+
+    const aaplcad::platform::PointerEvent pointerEvent{
+        aaplcad::platform::InputDevice::trackpad,
+        aaplcad::platform::InputAction::scroll,
+        10.0,
+        20.0,
+        0.5,
+        -1.5,
+        aaplcad::platform::modifierShift | aaplcad::platform::modifierCommand,
+    };
+    const auto description = aaplcad::platform::describe(pointerEvent);
+    require(description.find("trackpad:scroll") != std::string::npos, "pointer event description should include device and action");
 
     const auto platform = aaplcad::platform::currentPlatform();
     require(!platform.operatingSystem.empty(), "platform info should expose operating system");

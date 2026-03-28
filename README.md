@@ -75,8 +75,16 @@ Current scaffold includes:
 
 - a root `CMakeLists.txt`
 - initial `core` and `platform` headers / sources
-- a minimal example target
+- a minimal console example target
+- a macOS AppKit + Metal viewer prototype target
 - a basic unit test target
+
+Run the prototypes:
+
+```bash
+./build/aaplcad_minimal_viewer
+./build/aaplcad_mac_viewer
+```
 
 ## License
 
@@ -109,13 +117,14 @@ Completed:
 
 1. Root project and directory scaffold
 2. Initial Core / Platform API placeholders
-3. Minimal example and unit test targets
+3. Initial Geometry / Database API placeholders
+4. Minimal example, macOS Metal viewer prototype, and unit test targets
 
 Next:
 
-1. Initial Geometry / Database APIs
-2. Minimum Metal Viewer prototype
-3. Basic testing and benchmarking expansion
+1. macOS input abstraction expansion for trackpad / keyboard semantics
+2. Basic testing and benchmarking expansion
+3. Selection, picking, and navigation prototype wiring
 
 ---
 
@@ -195,8 +204,16 @@ ctest --test-dir build --output-on-failure
 
 - 根级 `CMakeLists.txt`
 - 初始 `core` 与 `platform` 头文件 / 源文件
-- 最小示例目标
+- 最小控制台示例目标
+- macOS AppKit + Metal viewer 原型目标
 - 基础单元测试目标
+
+运行原型：
+
+```bash
+./build/aaplcad_minimal_viewer
+./build/aaplcad_mac_viewer
+```
 
 ## 许可说明
 
@@ -229,10 +246,11 @@ ctest --test-dir build --output-on-failure
 
 1. 根工程与目录骨架
 2. 初始 Core / Platform API 占位
-3. 最小示例与单元测试目标
+3. 初始 Geometry / Database API 占位
+4. 最小示例、macOS Metal viewer 原型与单元测试目标
 
 下一步：
 
-1. Core / Geometry / Database 初始 API 扩展
-2. Metal Viewer 最小原型
-3. 基础测试与 benchmark 扩展
+1. macOS 输入抽象扩展到 trackpad / keyboard 语义
+2. 基础测试与 benchmark 扩展
+3. 选择、拾取与导航原型接线

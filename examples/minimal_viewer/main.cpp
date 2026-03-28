@@ -32,6 +32,6 @@ int main() {
     std::cout << "AAPLCAD SDK " << aaplcad::kVersionString << '\n';
     std::cout << "Platform: " << platform.description() << '\n';
     std::cout << "Document layers: " << document.layerCount() << ", entities: " << document.entityCount() << '\n';
-    std::cout << "Next step: replace this console app with an AppKit + Metal viewer shell." << '\n';
+    std::cout << "Next step: expand viewer navigation, picking, and input semantics." << '\n';
     return 0;
 }

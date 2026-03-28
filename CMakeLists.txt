@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(AAPLCADsdk
     VERSION 0.1.0
     DESCRIPTION "Apple-first CAD SDK scaffold"
-    LANGUAGES CXX)
+    LANGUAGES CXX OBJCXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,6 +24,7 @@ endif()
 add_library(aaplcad
     src/core/log.cpp
     src/platform/platform.cpp
+    src/platform/input_event.cpp
     src/database/document.cpp)
 
 add_library(aaplcad::aaplcad ALIAS aaplcad)
@@ -50,6 +51,23 @@ if(AAPLCAD_BUILD_EXAMPLES)
     add_executable(aaplcad_minimal_viewer
         examples/minimal_viewer/main.cpp)
     target_link_libraries(aaplcad_minimal_viewer PRIVATE aaplcad::aaplcad)
+
+    if(APPLE)
+        find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+        find_library(METAL_FRAMEWORK Metal REQUIRED)
+        find_library(METALKIT_FRAMEWORK MetalKit REQUIRED)
+        find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
+
+        add_executable(aaplcad_mac_viewer
+            apps/mac_viewer/main.mm)
+        target_link_libraries(aaplcad_mac_viewer
+            PRIVATE
+                aaplcad::aaplcad
+                ${APPKIT_FRAMEWORK}
+                ${METAL_FRAMEWORK}
+                ${METALKIT_FRAMEWORK}
+                ${QUARTZCORE_FRAMEWORK})
+    endif()
 endif()
 
 if(AAPLCAD_BUILD_TESTS)
