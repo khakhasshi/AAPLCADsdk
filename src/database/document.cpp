@@ -14,6 +14,10 @@ std::size_t Document::layerCount() const noexcept {
     return layers_.size();
 }
 
+const std::vector<std::unique_ptr<Entity>>& Document::entities() const noexcept {
+    return entities_;
+}
+
 aaplcad::core::Result<aaplcad::core::ObjectId> Document::addLayer(const std::string& name) {
     if (name.empty()) {
         return aaplcad::core::Error{"E_LAYER_NAME", "layer name must not be empty"};

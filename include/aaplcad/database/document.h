@@ -19,6 +19,7 @@ public:
 
     [[nodiscard]] std::size_t entityCount() const noexcept;
     [[nodiscard]] std::size_t layerCount() const noexcept;
+    [[nodiscard]] const std::vector<std::unique_ptr<Entity>>& entities() const noexcept;
 
     aaplcad::core::Result<aaplcad::core::ObjectId> addLayer(const std::string& name);
     aaplcad::core::Result<aaplcad::core::ObjectId> addEntity(std::unique_ptr<Entity> entity);

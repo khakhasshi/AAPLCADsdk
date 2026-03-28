@@ -6,6 +6,7 @@
 #include "aaplcad/geometry/circle2d.h"
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/geometry/point2d.h"
+#include "aaplcad/graphics/draw_list_2d.h"
 #include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
 #include "aaplcad/platform/platform.h"
@@ -97,6 +98,16 @@ int main() {
     const auto screenPoint = viewState.worldToScreen({4.0, 6.0});
     const auto worldPoint = viewState.screenToWorld(screenPoint);
     require(worldPoint.x == 4.0 && worldPoint.y == 6.0, "world/screen transforms should round-trip");
+
+    aaplcad::graphics::ViewState2d drawListViewState;
+    const auto drawList = aaplcad::graphics::buildDrawList2d(document, drawListViewState, 500.0, 500.0);
+    require(drawList.lineSegments.size() == 1, "draw list should include visible line entities");
+    require(drawList.lineSegments.front().start.x == 0.0, "draw list should transform line start x");
+
+    aaplcad::graphics::ViewState2d farAwayViewState;
+    farAwayViewState.panByScreenDelta(-1000.0, -1000.0);
+    const auto culledDrawList = aaplcad::graphics::buildDrawList2d(document, farAwayViewState, 100.0, 100.0);
+    require(culledDrawList.lineSegments.empty(), "draw list should cull off-screen geometry");
 
     const auto platform = aaplcad::platform::currentPlatform();
     require(!platform.operatingSystem.empty(), "platform info should expose operating system");

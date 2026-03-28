@@ -36,11 +36,11 @@ The macOS viewer currently provides:
 - clear-pass rendering shell
 - reusable 2D view state
 - basic pan and zoom interaction
+- minimal 2D document line rendering through a reusable draw-list builder
 - input event logging and reset behavior
 
 The viewer does not yet provide:
 
-- draw-list rendering of geometry
 - selection / picking
 - object snap or command interaction
 
@@ -52,6 +52,7 @@ The next active implementation target is:
 2. wire scroll / magnify input to pan and zoom
 3. render visible geometry through the current view state
 4. keep the logic testable outside AppKit where possible
+5. expand beyond line-only rendering into richer draw-list content
 
 ## Recommended Next Steps
 

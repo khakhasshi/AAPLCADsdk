@@ -18,6 +18,7 @@ The format is based on Keep a Changelog, and this project follows a pre-release 
 - Minimal example target under `examples/minimal_viewer/`.
 - macOS AppKit + Metal viewer prototype under `apps/mac_viewer/`.
 - Basic unit test target under `tests/unit/`.
+- Initial 2D draw-list builder for visible line entities based on `Document` + `ViewState2d`.
 - Extended repository directory skeleton for future `apps`, `plugins`, `resources`, integration tests, and performance tests.
 - Root `.gitignore` for local build artifacts and editor noise.
 
@@ -27,6 +28,7 @@ The format is based on Keep a Changelog, and this project follows a pre-release 
 - Updated the minimal example to create a demo document, layer, and line entity through the new Phase 2-facing APIs.
 - Updated the build to include an Objective-C++ macOS viewer target linked with AppKit and MetalKit.
 - Updated the macOS viewer prototype to use a reusable 2D view state for pan / zoom / reset interaction.
+- Updated the macOS viewer prototype to render simple document line geometry through the new draw-list path.
 
 ### Known Issues
 - The macOS viewer now supports basic pan / zoom state, but still lacks geometry draw-list rendering, selection, and picking.

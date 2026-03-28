@@ -25,6 +25,7 @@ add_library(aaplcad
     src/core/log.cpp
     src/platform/platform.cpp
     src/platform/input_event.cpp
+    src/graphics/draw_list_2d.cpp
     src/database/document.cpp)
 
 add_library(aaplcad::aaplcad ALIAS aaplcad)
