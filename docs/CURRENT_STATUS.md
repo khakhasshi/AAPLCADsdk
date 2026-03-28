@@ -21,7 +21,7 @@ Implemented and verified:
 - Screen-space line picking with entity id feedback
 - Mouse click selection and highlight feedback in the macOS viewer
 - Mouse drag panning and trackpad scrolling for canvas navigation
-- Trackpad single-finger tap selection and three-finger pan support
+- Trackpad single-finger tap selection, three-finger pan, and `Shift` + three-finger box selection support
 - On-canvas debug coordinate overlay with `screen` and `world` readout
 - Upright house sketch demo geometry for interaction testing
 
@@ -46,8 +46,26 @@ The macOS viewer currently provides:
 - mouse-based pan interaction
 - scroll-wheel / trackpad scroll navigation
 - line-entity click / tap selection with highlight feedback
+- `Shift` + mouse drag box selection
+- `Shift` + three-finger trackpad drag box selection
 - top-right debug overlay for current cursor `screen` and `world` coordinates
 - house-sketch demo scene for navigation and picking regression checks
+
+## Current Input Mapping
+
+The current prototype uses the following interaction rules:
+
+- `Mouse drag`: pan the canvas
+- `Mouse click`: select a line entity under the pointer
+- `Shift` + `mouse drag`: enter box selection instead of panning
+- `Trackpad scroll`: pan the canvas
+- `Trackpad pinch`: zoom at the gesture anchor
+- `Trackpad single-finger tap`: select near the tap location
+- `Trackpad three-finger drag`: pan the canvas
+- `Shift` + `trackpad three-finger drag`: enter box selection instead of panning
+- `0`: reset view and clear selection
+
+This mapping is intentional so that `Shift` consistently means "selection framing" for both desktop pointer and trackpad workflows, rather than allowing the same modifier to keep moving the camera while the user is trying to frame a selection rectangle.
 
 The viewer does not yet provide:
 

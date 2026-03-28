@@ -7,6 +7,7 @@
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/geometry/point2d.h"
 #include "aaplcad/graphics/draw_list_2d.h"
+#include "aaplcad/graphics/selection_state_2d.h"
 #include "aaplcad/graphics/view_interaction_state_2d.h"
 #include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
@@ -15,6 +16,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <iostream>
+#include <optional>
 
 namespace {
 
@@ -73,7 +75,11 @@ int main() {
 
     const auto entityResult = document.addEntity(std::move(entity));
     require(entityResult.ok(), "adding an entity should succeed when layer exists");
-    require(document.entityCount() == 1, "entity count should increase after insertion");
+    auto secondEntity = std::make_unique<aaplcad::database::LineEntity>(aaplcad::geometry::Line2d{{40.0, 40.0}, {70.0, 40.0}});
+    secondEntity->setLayerName("geometry");
+    const auto secondEntityResult = document.addEntity(std::move(secondEntity));
+    require(secondEntityResult.ok(), "adding a second entity should succeed when layer exists");
+    require(document.entityCount() == 2, "entity count should increase after insertions");
     require(document.findEntity(entityResult.value()) != nullptr, "document should find stored entity by id");
 
     const auto transaction = document.beginTransaction();
@@ -107,7 +113,7 @@ int main() {
 
     aaplcad::graphics::ViewState2d drawListViewState;
     const auto drawList = aaplcad::graphics::buildDrawList2d(document, drawListViewState, 500.0, 500.0);
-    require(drawList.lineSegments.size() == 1, "draw list should include visible line entities");
+    require(drawList.lineSegments.size() == 2, "draw list should include visible line entities");
     require(drawList.lineSegments.front().entityId == entityResult.value(), "draw list should preserve entity id for picking");
     require(drawList.lineSegments.front().start.x == 0.0, "draw list should transform line start x");
 
@@ -117,6 +123,32 @@ int main() {
 
     const auto missHit = aaplcad::graphics::pickLineSegmentAtScreenPoint(drawList, {200.0, 200.0}, 4.0);
     require(!missHit.has_value(), "picking should miss when no line is within tolerance");
+
+    const auto boxHits = aaplcad::graphics::pickLineSegmentsInScreenRect(drawList, {{-1.0, -1.0}, {5.0, 5.0}});
+    require(boxHits.size() == 1, "box selection should find a line intersecting the screen rectangle");
+    require(boxHits.front() == entityResult.value(), "box selection should return the intersecting entity id");
+
+    const auto multiBoxHits = aaplcad::graphics::pickLineSegmentsInScreenRect(drawList, {{-1.0, -1.0}, {80.0, 50.0}});
+    require(multiBoxHits.size() == 2, "larger box selection should collect multiple intersecting entities");
+
+    aaplcad::graphics::SelectionState2d selectionState;
+    require(!selectionState.hasSelection(), "selection state should start empty");
+    require(selectionState.selectionCount() == 0, "selection state should start with zero selected entities");
+    require(!selectionState.isSelected(entityResult.value()), "selection state should not report a selection before select");
+    selectionState.select(entityResult.value());
+    require(selectionState.hasSelection(), "selection state should track an active selection");
+    require(selectionState.selectionCount() == 1, "selection state should track the number of selected entities");
+    require(selectionState.isSelected(entityResult.value()), "selection state should report the selected entity");
+    require(selectionState.selectedEntityId() == entityResult.value(), "selection state should expose the selected entity id");
+    require(!selectionState.applyHit(pickHit), "reapplying the same selection hit should not report a change");
+    require(selectionState.applyHit(std::nullopt), "applying an empty hit should clear the selection");
+    require(!selectionState.hasSelection(), "selection state should be empty after clearing via empty hit");
+    require(selectionState.applyHit(pickHit), "applying a valid hit should restore the selection");
+    require(selectionState.replaceWith({entityResult.value(), secondEntityResult.value()}), "replaceWith should allow multiple selected entities");
+    require(selectionState.selectionCount() == 2, "replaceWith should preserve all selected entities");
+    require(selectionState.isSelected(secondEntityResult.value()), "replaceWith should include the second entity in the selection");
+    selectionState.clear();
+    require(!selectionState.hasSelection(), "selection state clear should reset the selected entity");
 
     aaplcad::graphics::ViewState2d farAwayViewState;
     farAwayViewState.panByScreenDelta(-1000.0, -1000.0);

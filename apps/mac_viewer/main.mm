@@ -8,6 +8,7 @@
 #include "aaplcad/database/line_entity.h"
 #include "aaplcad/geometry/line2d.h"
 #include "aaplcad/graphics/draw_list_2d.h"
+#include "aaplcad/graphics/selection_state_2d.h"
 #include "aaplcad/graphics/view_interaction_state_2d.h"
 #include "aaplcad/graphics/view_state_2d.h"
 #include "aaplcad/platform/input_event.h"
@@ -25,6 +26,8 @@ struct ViewerVertex {
 struct ViewerColor {
     float rgba[4];
 };
+
+static constexpr double kBoxSelectionMinSize = 4.0;
 
 static aaplcad::geometry::Point2d centroidForTouches(NSSet<NSTouch*>* touches) {
     if (touches.count == 0) {
@@ -98,8 +101,12 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 @private
     aaplcad::graphics::ViewState2d _viewState;
     aaplcad::graphics::ViewInteractionState2d _interactionState;
+    aaplcad::graphics::SelectionState2d _selectionState;
     aaplcad::database::Document _document;
-    aaplcad::core::ObjectId _selectedEntityId;
+    bool _isBoxSelecting;
+    bool _boxSelectionUsesTouch;
+    NSPoint _boxSelectionStart;
+    NSPoint _boxSelectionCurrent;
     NSTextField* _debugCoordinateLabel;
     NSTrackingArea* _trackingArea;
     id<MTLCommandQueue> _commandQueue;
@@ -107,6 +114,7 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 }
 
 - (void)handleSelectionEvent:(NSEvent*)event;
+- (void)handleBoxSelectionDragEvent:(NSEvent*)event;
 - (void)handlePanEvent:(NSEvent*)event;
 - (void)handleMouseUpEvent:(NSEvent*)event;
 - (BOOL)containsWindowPoint:(NSPoint)windowPoint;
@@ -116,6 +124,11 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 - (void)layoutDebugOverlay;
 - (void)updateTrackingAreas;
 - (void)clearDebugCoordinateLabel;
+- (BOOL)isBoxSelectionModifierActive:(NSEvent*)event;
+- (BOOL)shouldUseTouchBoxSelection:(NSEvent*)event touchCount:(NSUInteger)touchCount;
+- (aaplcad::geometry::Extents2d)currentBoxSelectionRect;
+- (void)applyBoxSelection;
+- (NSPoint)renderPointFromNormalizedPoint:(aaplcad::geometry::Point2d)normalizedPoint;
 @end
 
 @implementation AAPLViewerView
@@ -201,16 +214,52 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     const auto hit = aaplcad::graphics::pickLineSegmentAtScreenPoint(drawList, {viewPoint.x, viewPoint.y}, pickTolerance);
 
     if (hit.has_value()) {
-        _selectedEntityId = hit->entityId;
+        (void)_selectionState.applyHit(hit);
         std::ostringstream stream;
         stream << "viewer selected line entity id=" << hit->entityId.value()
                << " distance=" << hit->distance
                << " tolerance=" << pickTolerance;
         aaplcad::core::logMessage(aaplcad::core::LogLevel::info, stream.str());
     } else {
-        _selectedEntityId = aaplcad::core::ObjectId{};
-        aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer selection cleared");
+        if (_selectionState.applyHit(hit)) {
+            aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer selection cleared");
+        }
     }
+}
+
+- (BOOL)isBoxSelectionModifierActive:(NSEvent*)event {
+    return (mapModifiers([event modifierFlags]) & aaplcad::platform::modifierShift) != 0;
+}
+
+- (BOOL)shouldUseTouchBoxSelection:(NSEvent*)event touchCount:(NSUInteger)touchCount {
+    return touchCount == 3 && [self isBoxSelectionModifierActive:event];
+}
+
+- (NSPoint)renderPointFromNormalizedPoint:(aaplcad::geometry::Point2d)normalizedPoint {
+    return NSMakePoint(normalizedPoint.x * self.bounds.size.width,
+                       normalizedPoint.y * self.bounds.size.height);
+}
+
+- (aaplcad::geometry::Extents2d)currentBoxSelectionRect {
+    return {
+        {std::min(_boxSelectionStart.x, _boxSelectionCurrent.x), std::min(_boxSelectionStart.y, _boxSelectionCurrent.y)},
+        {std::max(_boxSelectionStart.x, _boxSelectionCurrent.x), std::max(_boxSelectionStart.y, _boxSelectionCurrent.y)},
+    };
+}
+
+- (void)applyBoxSelection {
+    const auto rect = [self currentBoxSelectionRect];
+    if (rect.width() < kBoxSelectionMinSize && rect.height() < kBoxSelectionMinSize) {
+        [self selectEntityAtViewPoint:_boxSelectionCurrent];
+        return;
+    }
+
+    const auto drawList = [self currentDrawList];
+    const auto entityIds = aaplcad::graphics::pickLineSegmentsInScreenRect(drawList, rect);
+    const bool changed = _selectionState.replaceWith(entityIds);
+    std::ostringstream stream;
+    stream << "viewer box selected " << entityIds.size() << " entities";
+    aaplcad::core::logMessage(changed ? aaplcad::core::LogLevel::info : aaplcad::core::LogLevel::debug, stream.str());
 }
 
 - (NSPoint)currentRenderPointFromMouseLocation {
@@ -221,12 +270,22 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 
 - (void)handleSelectionEvent:(NSEvent*)event {
     [[self window] makeFirstResponder:self];
+
+    const NSPoint location = [self renderPointFromEvent:event];
+    if ([self isBoxSelectionModifierActive:event]) {
+        _isBoxSelecting = YES;
+        _boxSelectionUsesTouch = NO;
+        _boxSelectionStart = location;
+        _boxSelectionCurrent = location;
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
     _interactionState.beginPointerDrag();
 
     const std::string eventDescription = aaplcad::platform::describe(makePointerEvent(event, aaplcad::platform::InputAction::buttonDown));
     aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, eventDescription);
 
-    const NSPoint location = [self renderPointFromEvent:event];
     std::ostringstream stream;
     stream << "viewer click at (" << location.x << ", " << location.y << ")";
     aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, stream.str());
@@ -235,7 +294,21 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     [self setNeedsDisplay:YES];
 }
 
+- (void)handleBoxSelectionDragEvent:(NSEvent*)event {
+    if (!_isBoxSelecting) {
+        return;
+    }
+
+    _boxSelectionCurrent = [self renderPointFromEvent:event];
+    [self setNeedsDisplay:YES];
+}
+
 - (void)handlePanEvent:(NSEvent*)event {
+    if (_isBoxSelecting) {
+        [self handleBoxSelectionDragEvent:event];
+        return;
+    }
+
     if (!_interactionState.isPointerDragging()) {
         return;
     }
@@ -251,7 +324,14 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 }
 
 - (void)handleMouseUpEvent:(NSEvent*)event {
-    (void)event;
+    if (_isBoxSelecting) {
+        _boxSelectionCurrent = [self renderPointFromEvent:event];
+        [self applyBoxSelection];
+        _isBoxSelecting = NO;
+        _boxSelectionUsesTouch = NO;
+        [self setNeedsDisplay:YES];
+    }
+
     _interactionState.endPointerDrag();
 }
 
@@ -324,7 +404,10 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
         self.wantsRestingTouches = YES;
         self.allowedTouchTypes = NSTouchTypeMaskIndirect;
         _viewState = aaplcad::graphics::ViewState2d{};
-        _selectedEntityId = aaplcad::core::ObjectId{};
+        _isBoxSelecting = NO;
+        _boxSelectionUsesTouch = NO;
+        _boxSelectionStart = NSMakePoint(0.0, 0.0);
+        _boxSelectionCurrent = NSMakePoint(0.0, 0.0);
         _debugCoordinateLabel = [[NSTextField alloc] initWithFrame:NSZeroRect];
         _debugCoordinateLabel.editable = NO;
         _debugCoordinateLabel.bezeled = NO;
@@ -380,7 +463,7 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
         const CGSize viewportSize = self.bounds.size;
         for (const auto& segment : drawList.lineSegments) {
             const auto vertices = [self clipSpaceVerticesForSegment:segment viewportSize:viewportSize];
-            const bool isSelected = segment.entityId == _selectedEntityId;
+            const bool isSelected = _selectionState.isSelected(segment.entityId);
             const ViewerColor color = isSelected
                 ? ViewerColor{{1.0f, 0.35f, 0.25f, 1.0f}}
                 : ViewerColor{{0.89f, 0.77f, 0.27f, 1.0f}};
@@ -410,6 +493,25 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
             [encoder setVertexBytes:vertices.data() length:sizeof(ViewerVertex) * vertices.size() atIndex:0];
             [encoder setFragmentBytes:&color length:sizeof(color) atIndex:1];
             [encoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:2];
+        }
+
+        if (_isBoxSelecting) {
+            const auto rect = [self currentBoxSelectionRect];
+            if (rect.width() > 0.0 || rect.height() > 0.0) {
+                const aaplcad::graphics::LineSegment2d boxSegments[] = {
+                    {{}, {rect.min.x, rect.min.y}, {rect.max.x, rect.min.y}},
+                    {{}, {rect.max.x, rect.min.y}, {rect.max.x, rect.max.y}},
+                    {{}, {rect.max.x, rect.max.y}, {rect.min.x, rect.max.y}},
+                    {{}, {rect.min.x, rect.max.y}, {rect.min.x, rect.min.y}},
+                };
+                const ViewerColor boxColor{{0.45f, 0.75f, 1.0f, 1.0f}};
+                for (const auto& boxSegment : boxSegments) {
+                    const auto vertices = [self clipSpaceVerticesForSegment:boxSegment viewportSize:viewportSize];
+                    [encoder setVertexBytes:vertices.data() length:sizeof(ViewerVertex) * vertices.size() atIndex:0];
+                    [encoder setFragmentBytes:&boxColor length:sizeof(boxColor) atIndex:1];
+                    [encoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:2];
+                }
+            }
         }
     }
 
@@ -464,6 +566,11 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 
 - (void)mouseDragged:(NSEvent*)event {
     [self updateDebugCoordinateLabelWithRenderPoint:[self renderPointFromEvent:event]];
+    if (_isBoxSelecting) {
+        [self handleBoxSelectionDragEvent:event];
+        return;
+    }
+
     [self handlePanEvent:event];
 }
 
@@ -483,6 +590,11 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 
 - (void)leftMouseDragged:(NSEvent*)event {
     [self updateDebugCoordinateLabelWithRenderPoint:[self renderPointFromEvent:event]];
+    if (_isBoxSelecting) {
+        [self handleBoxSelectionDragEvent:event];
+        return;
+    }
+
     [self handlePanEvent:event];
 }
 
@@ -498,6 +610,18 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     [super touchesBeganWithEvent:event];
 
     NSSet<NSTouch*>* activeTouches = [event touchesMatchingPhase:NSTouchPhaseTouching | NSTouchPhaseBegan inView:self];
+    if ([self shouldUseTouchBoxSelection:event touchCount:activeTouches.count]) {
+        const auto centroid = centroidForTouches(activeTouches);
+        _interactionState.cancelTouchSequence();
+        _isBoxSelecting = YES;
+        _boxSelectionUsesTouch = YES;
+        _boxSelectionStart = [self renderPointFromNormalizedPoint:centroid];
+        _boxSelectionCurrent = _boxSelectionStart;
+        aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer touch box-selection began");
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
     _interactionState.beginTouchSequence(activeTouches.count, centroidForTouches(activeTouches));
     if (activeTouches.count == 3) {
         aaplcad::core::logMessage(aaplcad::core::LogLevel::debug, "viewer three-finger gesture began");
@@ -508,6 +632,12 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
     [super touchesMovedWithEvent:event];
 
     NSSet<NSTouch*>* activeTouches = [event touchesMatchingPhase:NSTouchPhaseTouching | NSTouchPhaseStationary inView:self];
+    if (_isBoxSelecting && _boxSelectionUsesTouch) {
+        _boxSelectionCurrent = [self renderPointFromNormalizedPoint:centroidForTouches(activeTouches)];
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
     if (_interactionState.updateTouchSequence(_viewState,
                                               activeTouches.count,
                                               centroidForTouches(activeTouches),
@@ -524,6 +654,16 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 - (void)touchesEndedWithEvent:(NSEvent*)event {
     [super touchesEndedWithEvent:event];
 
+    if (_isBoxSelecting && _boxSelectionUsesTouch) {
+        NSSet<NSTouch*>* endingTouches = [event touchesMatchingPhase:NSTouchPhaseEnded inView:self];
+        _boxSelectionCurrent = [self renderPointFromNormalizedPoint:centroidForTouches(endingTouches.count > 0 ? endingTouches : [event touchesMatchingPhase:NSTouchPhaseAny inView:self])];
+        [self applyBoxSelection];
+        _isBoxSelecting = NO;
+        _boxSelectionUsesTouch = NO;
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
     NSSet<NSTouch*>* endingTouches = [event touchesMatchingPhase:NSTouchPhaseEnded inView:self];
     const auto normalizedPoint = _interactionState.endTouchSequence(endingTouches.count, centroidForTouches(endingTouches));
     if (normalizedPoint.has_value()) {
@@ -533,13 +673,17 @@ static aaplcad::platform::PointerEvent makePointerEvent(NSEvent* event, aaplcad:
 
 - (void)touchesCancelledWithEvent:(NSEvent*)event {
     [super touchesCancelledWithEvent:event];
+    _isBoxSelecting = NO;
+    _boxSelectionUsesTouch = NO;
     _interactionState.cancelTouchSequence();
 }
 
 - (void)keyDown:(NSEvent*)event {
     if ([[event charactersIgnoringModifiers] isEqualToString:@"0"]) {
         _viewState.reset();
-        _selectedEntityId = aaplcad::core::ObjectId{};
+        _selectionState.clear();
+        _isBoxSelecting = NO;
+        _boxSelectionUsesTouch = NO;
         aaplcad::core::logMessage(aaplcad::core::LogLevel::info, "viewer state reset");
         [self setNeedsDisplay:YES];
         return;

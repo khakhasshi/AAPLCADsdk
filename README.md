@@ -81,6 +81,7 @@ Current scaffold includes:
 - a basic unit test target
 - reusable 2D view-state and draw-list helpers
 - line rendering, line picking, and highlight feedback in the macOS viewer
+- box selection for mouse and `Shift` + three-finger trackpad workflows
 - a house-sketch demo scene for navigation / interaction testing
 
 Run the prototypes:

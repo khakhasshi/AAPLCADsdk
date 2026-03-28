@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aaplcad/core/object_id.h"
+#include "aaplcad/geometry/extents2d.h"
 #include "aaplcad/geometry/point2d.h"
 
 #include <optional>
@@ -37,5 +38,8 @@ struct SelectionHit2d {
 [[nodiscard]] std::optional<SelectionHit2d> pickLineSegmentAtScreenPoint(const DrawList2d& drawList,
                                                                           geometry::Point2d screenPoint,
                                                                           double tolerance);
+
+[[nodiscard]] std::vector<core::ObjectId> pickLineSegmentsInScreenRect(const DrawList2d& drawList,
+                                                                       geometry::Extents2d screenRect);
 
 }  // namespace aaplcad::graphics

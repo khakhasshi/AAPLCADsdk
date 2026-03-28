@@ -1,5 +1,6 @@
 #include "aaplcad/graphics/draw_list_2d.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "aaplcad/database/document.h"
@@ -29,6 +30,68 @@ geometry::Extents2d makeScreenExtents(geometry::Point2d a, geometry::Point2d b) 
         {a.x < b.x ? a.x : b.x, a.y < b.y ? a.y : b.y},
         {a.x > b.x ? a.x : b.x, a.y > b.y ? a.y : b.y},
     };
+}
+
+geometry::Extents2d normalizedExtents(geometry::Extents2d extents) noexcept {
+    return {
+        {std::min(extents.min.x, extents.max.x), std::min(extents.min.y, extents.max.y)},
+        {std::max(extents.min.x, extents.max.x), std::max(extents.min.y, extents.max.y)},
+    };
+}
+
+bool containsPoint(const geometry::Extents2d& extents, geometry::Point2d point) noexcept {
+    return point.x >= extents.min.x && point.x <= extents.max.x &&
+           point.y >= extents.min.y && point.y <= extents.max.y;
+}
+
+double crossProduct(geometry::Point2d a, geometry::Point2d b, geometry::Point2d c) noexcept {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+bool onSegment(geometry::Point2d a, geometry::Point2d b, geometry::Point2d point) noexcept {
+    return point.x >= std::min(a.x, b.x) && point.x <= std::max(a.x, b.x) &&
+           point.y >= std::min(a.y, b.y) && point.y <= std::max(a.y, b.y);
+}
+
+bool segmentsIntersect(geometry::Point2d a0, geometry::Point2d a1, geometry::Point2d b0, geometry::Point2d b1) noexcept {
+    const double d1 = crossProduct(a0, a1, b0);
+    const double d2 = crossProduct(a0, a1, b1);
+    const double d3 = crossProduct(b0, b1, a0);
+    const double d4 = crossProduct(b0, b1, a1);
+
+    if (((d1 > 0.0 && d2 < 0.0) || (d1 < 0.0 && d2 > 0.0)) &&
+        ((d3 > 0.0 && d4 < 0.0) || (d3 < 0.0 && d4 > 0.0))) {
+        return true;
+    }
+
+    if (d1 == 0.0 && onSegment(a0, a1, b0)) {
+        return true;
+    }
+    if (d2 == 0.0 && onSegment(a0, a1, b1)) {
+        return true;
+    }
+    if (d3 == 0.0 && onSegment(b0, b1, a0)) {
+        return true;
+    }
+    if (d4 == 0.0 && onSegment(b0, b1, a1)) {
+        return true;
+    }
+
+    return false;
+}
+
+bool segmentIntersectsExtents(const LineSegment2d& segment, const geometry::Extents2d& extents) noexcept {
+    if (containsPoint(extents, segment.start) || containsPoint(extents, segment.end)) {
+        return true;
+    }
+
+    const geometry::Point2d topLeft{extents.min.x, extents.max.y};
+    const geometry::Point2d bottomRight{extents.max.x, extents.min.y};
+
+    return segmentsIntersect(segment.start, segment.end, extents.min, topLeft) ||
+           segmentsIntersect(segment.start, segment.end, topLeft, extents.max) ||
+           segmentsIntersect(segment.start, segment.end, extents.max, bottomRight) ||
+           segmentsIntersect(segment.start, segment.end, bottomRight, extents.min);
 }
 
 double squaredDistanceToSegment(geometry::Point2d point, const LineSegment2d& segment) noexcept {
@@ -105,6 +168,27 @@ std::optional<SelectionHit2d> pickLineSegmentAtScreenPoint(const DrawList2d& dra
     }
 
     return closestHit;
+}
+
+std::vector<core::ObjectId> pickLineSegmentsInScreenRect(const DrawList2d& drawList,
+                                                         geometry::Extents2d screenRect) {
+    std::vector<core::ObjectId> entityIds;
+    const auto rect = normalizedExtents(screenRect);
+    if (rect.width() <= 0.0 || rect.height() <= 0.0) {
+        return entityIds;
+    }
+
+    for (const auto& segment : drawList.lineSegments) {
+        if (!segmentIntersectsExtents(segment, rect)) {
+            continue;
+        }
+
+        if (std::find(entityIds.begin(), entityIds.end(), segment.entityId) == entityIds.end()) {
+            entityIds.push_back(segment.entityId);
+        }
+    }
+
+    return entityIds;
 }
 
 }  // namespace aaplcad::graphics
